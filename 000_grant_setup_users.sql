@@ -14,7 +14,7 @@
     GNU General Public License for more details.
 
     You should have received a copy of the GNU General Public License
-    along with Foobar.  If not, see <https://www.gnu.org/licenses/>.
+    along with N_utilities.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #--Initial setup for n_util (run as the migration user or an administrator sufficiently privileged to create/grant a build user)
