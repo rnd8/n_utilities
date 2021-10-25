@@ -11,18 +11,18 @@ BEGIN
 
 #--Create the source view that generates bool
 CREATE OR REPLACE
-	ALGORITHM=TEMPTABLE 
+    ALGORITHM=TEMPTABLE 
     DEFINER=`n_util_build`
     SQL SECURITY INVOKER 
 VIEW `n_util_i`.`bool_sequence__SRC` AS 
-	SELECT FALSE AS `v`
+    SELECT FALSE AS `v`
     UNION ALL
     SELECT TRUE AS `v`
 ;
 
 #--Create the alias view that conveys bool
 CREATE OR REPLACE
-	ALGORITHM=TEMPTABLE 
+    ALGORITHM=TEMPTABLE 
     DEFINER=`n_util_build`
     SQL SECURITY DEFINER 
 VIEW `n_util`.`bool_sequence` AS 
@@ -32,17 +32,17 @@ VIEW `n_util`.`bool_sequence` AS
 
 #--Create the source view that generates micro_sequence
 CREATE OR REPLACE 
-	ALGORITHM=TEMPTABLE 
+    ALGORITHM=TEMPTABLE 
     DEFINER=`n_util_build`
     SQL SECURITY INVOKER 
 VIEW `n_util_i`.`nibble_sequence__SRC` AS
 	SELECT 0
-		| b3.v << 3
+        | b3.v << 3
         | b2.v << 2
         | b1.v << 1
         | b0.v << 0
         AS `v`
-    FROM 			`n_util`.`bool_sequence` AS b0
+    FROM                `n_util`.`bool_sequence` AS b0
     STRAIGHT_JOIN 	`n_util`.`bool_sequence` AS b1
     STRAIGHT_JOIN 	`n_util`.`bool_sequence` AS b2
     STRAIGHT_JOIN 	`n_util`.`bool_sequence` AS b3
@@ -62,11 +62,11 @@ SELECT * FROM `n_util_i`.`nibble_sequence__SRC`
 
 #--Create the source view that generates tiny_sequence
 CREATE OR REPLACE
-	ALGORITHM=TEMPTABLE 
+    ALGORITHM=TEMPTABLE 
     DEFINER=`n_util_build`
     SQL SECURITY INVOKER 
 VIEW `n_util_i`.`tiny_sequence__SRC` AS 
-	SELECT nS1.v << 4 | nS0.v AS `v`
+    SELECT nS1.v << 4 | nS0.v AS `v`
     FROM `n_util`.`nibble_sequence` AS nS0
     STRAIGHT_JOIN `n_util`.`nibble_sequence` AS nS1
 ;
@@ -85,11 +85,11 @@ SELECT * FROM `n_util_i`.`tiny_sequence__SRC`
 
 #--Create the source view that generates small_sequence
 CREATE OR REPLACE
-	ALGORITHM=TEMPTABLE 
+    ALGORITHM=TEMPTABLE 
     DEFINER=`n_util_build`
     SQL SECURITY INVOKER 
 VIEW `n_util_i`.`small_sequence__SRC` AS 
-	SELECT tS1.v << 8 | tS0.v AS `v`
+    SELECT tS1.v << 8 | tS0.v AS `v`
     FROM `n_util`.`tiny_sequence` AS tS0
     STRAIGHT_JOIN `n_util`.`tiny_sequence` AS tS1
 ;
