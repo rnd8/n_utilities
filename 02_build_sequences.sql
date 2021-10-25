@@ -26,7 +26,7 @@ CREATE OR REPLACE
     DEFINER=`n_util_build`
     SQL SECURITY DEFINER 
 VIEW `n_util`.`bool_sequence` AS 
-	SELECT * FROM `n_util_i`.`bool_sequence__SRC`
+    SELECT * FROM `n_util_i`.`bool_sequence__SRC`
 ;
 #--Try it: SELECT * FROM `n_util`.`bool_sequence`;
 
@@ -36,7 +36,7 @@ CREATE OR REPLACE
     DEFINER=`n_util_build`
     SQL SECURITY INVOKER 
 VIEW `n_util_i`.`nibble_sequence__SRC` AS
-	SELECT 0
+    SELECT 0
         | b3.v << 3
         | b2.v << 2
         | b1.v << 1
