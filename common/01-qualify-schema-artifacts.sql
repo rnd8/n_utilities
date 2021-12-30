@@ -147,7 +147,7 @@ BEGIN
         FROM (
 			SELECT `COLUMN_NAME`
 			FROM `information_schema`.`columns` AS I
-			STRAIGHT_JOIN (
+			/*STRAIGHT_*/JOIN ( #--MySQL 5.7 compatibility
 				SELECT 
 					`s`.`v` AS ord, 
 					JSON_UNQUOTE(JSON_EXTRACT(`p_column_names`, CONCAT('$[', `s`.`v`, ']'))) AS `COLUMN_NAME`
