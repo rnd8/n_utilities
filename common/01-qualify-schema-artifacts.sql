@@ -216,7 +216,7 @@ BEGIN
         ORDER BY C.ord ASC SEPARATOR ','))
     INTO row_constructor
     FROM `information_schema`.`columns` AS I
-    STRAIGHT_JOIN (
+    /*STRAIGHT_*/JOIN ( #--Not using straight_join for MySQL 5.7 compatibility
 		SELECT 
 			`s`.`v` AS ord, 
             JSON_UNQUOTE(JSON_EXTRACT(`p_column_names`, CONCAT('$[', `s`.`v`, ']'))) AS `COLUMN_NAME`
