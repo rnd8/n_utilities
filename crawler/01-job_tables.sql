@@ -37,7 +37,7 @@ CREATE TABLE `n_util_s`.`crawler_job` (
   `boundary_start_tuple` JSON NULL COMMENT 'If not null, only process tuples past (and not including) this value',
   `boundary_end_tuple` JSON NULL COMMENT 'If not null, only process tuples until (and including) this value',
   PRIMARY KEY (`job_id`),
-  UNIQUE INDEX `job_name_UNIQUE` (`job_name` ASC) VISIBLE
+  UNIQUE INDEX `job_name_UNIQUE` (`job_name` ASC)
 )
 COMMENT = 'A crawling job and the associated options'
 ;
