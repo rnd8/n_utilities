@@ -56,8 +56,8 @@ TRUNCATE TABLE `n_test_app`.`crawler_target`;
 SET FOREIGN_KEY_CHECKS = 1;
 */
 DELETE I, J
-FROM `n_util`.`crawler_job_iteration` AS I
-JOIN `n_util_s`.`crawler_job` AS J
+FROM `n_util_s`.`crawler_job` AS J
+LEFT JOIN `n_util`.`crawler_job_iteration` AS I
 	USING (job_id)
 WHERE `job_name` = @crawler_test_title;
 SET FOREIGN_KEY_CHECKS = 1;

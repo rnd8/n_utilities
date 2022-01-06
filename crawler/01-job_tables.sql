@@ -16,10 +16,10 @@
     You should have received a copy of the GNU General Public License
     along with N_utilities.  If not, see <https://www.gnu.org/licenses/>.
 */
-
+DROP TABLE IF EXISTS `n_util_i`.`async_task`;
 DROP TABLE IF EXISTS `n_util`.`crawler_job_iteration`;
-DROP TABLE IF EXISTS `n_util_s`.`crawler_job`;
-CREATE TABLE `n_util_s`.`crawler_job` (
+DROP TABLE IF EXISTS `n_util_i`.`crawler_job`;
+CREATE TABLE `n_util_i`.`crawler_job` (
   `job_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `job_name` VARCHAR(64) NOT NULL,
   `workset_schema` VARCHAR(64) NOT NULL,
@@ -40,6 +40,14 @@ CREATE TABLE `n_util_s`.`crawler_job` (
   UNIQUE INDEX `job_name_UNIQUE` (`job_name` ASC)
 )
 COMMENT = 'A crawling job and the associated options'
+;
+
+CREATE OR REPLACE
+	ALGORITHM=MERGE 
+    DEFINER=`n_util_build` 
+    SQL SECURITY DEFINER 
+VIEW `n_util_s`.`crawler_job` AS 
+	SELECT * FROM `n_util_i`.`crawler_job`
 ;
 
 /*
@@ -72,7 +80,7 @@ CREATE TABLE `n_util`.`crawler_job_iteration` (
   INDEX resume_iteration_num (job_id ASC, resume_iteration_num ASC),
   CONSTRAINT `c_job_i2c_job`
     FOREIGN KEY (`job_id`)
-    REFERENCES `n_util_s`.`crawler_job` (`job_id`)
+    REFERENCES `n_util_i`.`crawler_job` (`job_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE,
   CONSTRAINT `c_job_i__resume`

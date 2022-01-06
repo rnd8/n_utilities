@@ -10,11 +10,12 @@ CREATE TABLE `n_util_i`.`async_task` (
   `error_occurred` TINYINT UNSIGNED NULL,
   `crawler_job_id` INT UNSIGNED NULL,
   PRIMARY KEY (`task_id`),
-  INDEX (`started_ts`, `wait_until_ts`, `deadline_ts`),
+  INDEX available_idx (`started_ts`, `wait_until_ts`, `deadline_ts`),
+  INDEX still_running (`started_ts`, `ended_ts`),
   UNIQUE INDEX `crawler_job` (`crawler_job_id` ASC),
   CONSTRAINT `async_task2c_job`
     FOREIGN KEY (`crawler_job_id`)
-    REFERENCES `n_util_s`.`crawler_job` (`job_id`)
+    REFERENCES `n_util_i`.`crawler_job` (`job_id`)
     ON DELETE CASCADE
     ON UPDATE CASCADE
 )
@@ -31,92 +32,9 @@ VIEW `n_util_i`.`async_task__AVAILABLE` AS
 	FROM `n_util_i`.`async_task`
 	WHERE TRUE 
 		AND `started_ts` IS NULL 
-        AND `wait_until_ts` >= NOW(6)
-        AND `deadline_ts` < NOW(6)
+        AND `wait_until_ts` <= NOW(6)
+        AND `deadline_ts` > NOW(6)
 ;
-
-DROP EVENT IF EXISTS `n_util_i`.`async_task_watchdog`;
-CREATE DEFINER = `n_util` EVENT `n_util_i`.`async_task_watchdog`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	ENABLE
-	COMMENT 'Ensures that the thread launchers are enabled when there are any active tasks.'
-	DO
-		CALL `n_util_i`.`async_task_watchdog`
-	;
-    
-DROP EVENT IF EXISTS `n_util_i`.`async_task_thread_launcher0`;
-CREATE DEFINER = `n_util` EVENT `n_util_i`.`async_task_thread_launcher0`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
-	DO
-		CALL `n_util_i`.`async_task_thread_launcher`
-	;
-DROP EVENT IF EXISTS `n_util_i`.`async_task_thread_launcher1`;
-CREATE DEFINER = `n_util` EVENT `n_util_i`.`async_task_thread_launcher1`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
-	DO
-		CALL `n_util_i`.`async_task_thread_launcher`
-	;
-DROP EVENT IF EXISTS `n_util_i`.`async_task_thread_launcher2`;
-CREATE DEFINER = `n_util` EVENT `async_task_thread_launcher2`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
-	DO
-		CALL `n_util_i`.`async_task_thread_launcher`
-	;
-DROP EVENT IF EXISTS `n_util_i`.`async_task_thread_launcher3`;
-CREATE DEFINER = `n_util` EVENT `n_util_i`.`async_task_thread_launcher3`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
-	DO
-		CALL `n_util_i`.`async_task_thread_launcher`
-	;
-DROP EVENT IF EXISTS `n_util_i`.`async_task_thread_launcher4`;
-CREATE DEFINER = `n_util` EVENT `n_util_i`.`async_task_thread_launcher4`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
-	DO
-		CALL `n_util_i`.`async_task_thread_launcher`
-	;
-DROP EVENT IF EXISTS `n_util_i`.`async_task_thread_launcher5`;
-CREATE DEFINER = `n_util` EVENT `n_util_i`.`async_task_thread_launcher5`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
-	DO
-		CALL `n_util_i`.`async_task_thread_launcher`
-	;
-DROP EVENT IF EXISTS `n_util_i`.`async_task_thread_launcher6`;
-CREATE DEFINER = `n_util` EVENT `n_util_i`.`async_task_thread_launcher6`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
-	DO
-		CALL `n_util_i`.`async_task_thread_launcher`
-	;
-DROP EVENT IF EXISTS `n_util_i`.`async_task_thread_launcher7`;
-CREATE DEFINER = `n_util` EVENT `n_util_i`.`async_task_thread_launcher7`
-	ON SCHEDULE EVERY 1 SECOND
-	ON COMPLETION PRESERVE
-	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
-	DO
-		CALL `n_util_i`.`async_task_thread_launcher`
-	;
     
 DELIMITER $$
 DROP PROCEDURE IF EXISTS `n_util_i`.`async_task_enable_thread_launchers`$$
@@ -130,17 +48,19 @@ BEGIN
             RESIGNAL;
         END;
 	
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher0` ENABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher1` ENABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher2` ENABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher3` ENABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher4` ENABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher5` ENABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher6` ENABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher7` ENABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher0` ENABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher1` ENABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher2` ENABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher3` ENABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher4` ENABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher5` ENABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher6` ENABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher7` ENABLE;
     
 END$$
 DELIMITER ;
+#--TEST:
+#--CALL `n_util_i`.`async_task_enable_thread_launchers`;
 
 DELIMITER $$
 DROP PROCEDURE IF EXISTS `n_util_i`.`async_task_disable_thread_launchers`$$
@@ -154,17 +74,20 @@ BEGIN
             RESIGNAL;
         END;
 	
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher0` DISABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher1` DISABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher2` DISABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher3` DISABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher4` DISABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher5` DISABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher6` DISABLE;
-	ALTER EVENT `n_util_i`.`async_task_thread_launcher7` DISABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher0` DISABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher1` DISABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher2` DISABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher3` DISABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher4` DISABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher5` DISABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher6` DISABLE;
+	ALTER DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher7` DISABLE;
     
 END$$
 DELIMITER ;
+#--TEST:
+#--CALL `n_util_i`.`async_task_disable_thread_launchers`;
+
 
 DELIMITER $$
 DROP PROCEDURE IF EXISTS `n_util_i`.`async_task_watchdog`$$
@@ -184,6 +107,8 @@ BEGIN
     
 END$$
 DELIMITER ;
+#--TEST:
+#--CALL `n_util_i`.`async_task_watchdog`;
 
 DELIMITER $$
 DROP PROCEDURE IF EXISTS `n_util_i`.`async_task_thread_launcher`$$
@@ -196,7 +121,11 @@ BEGIN
     DECLARE v_deadline_ts TIMESTAMP(6);
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
         BEGIN
-           UPDATE `n_util_i`.`async_task` SET `error_occurred` = TRUE WHERE `task_id` = v_task_id;
+			UPDATE `n_util_i`.`async_task`
+			SET 
+				`error_occurred` = TRUE,
+                `ended_ts` = IFNULL(`ended_ts`, NOW(6))
+            WHERE `task_id` = v_task_id;
            RESIGNAL;
         END;
 	
@@ -207,7 +136,7 @@ BEGIN
     START TRANSACTION;
     SELECT task_id INTO v_task_id FROM `n_util_i`.`async_task__AVAILABLE` LIMIT 1 FOR UPDATE;
     
-	IF(task_id IS NOT NULL) THEN
+	IF(v_task_id IS NOT NULL) THEN
 		UPDATE `n_util_i`.`async_task` 
         SET
 			`process_id` = CONNECTION_ID(),
@@ -240,3 +169,5 @@ BEGIN
     
 END$$
 DELIMITER ;
+#--TEST:
+#--CALL `n_util_i`.`async_task_thread_launcher`;

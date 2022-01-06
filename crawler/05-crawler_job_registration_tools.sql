@@ -8,29 +8,93 @@ CREATE DEFINER=`n_util_build` PROCEDURE `n_util`.`async_run_crawler_job`(
     SQL SECURITY DEFINER
     COMMENT 'Schedules the execution of a job with the MySQL event scheduler.'
 BEGIN
+	DECLARE v_job_id INT UNSIGNED;
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
         BEGIN
+			#--TODO: Add a specific error message for duplicate entry (a task for this job is already running)
+			ROLLBACK;
+            RESIGNAL;
+        END;
+        
+	SELECT `job_id`
+    INTO v_job_id
+    FROM `n_util_i`.`crawler_job`
+    WHERE `job_name` = p_job_name
+    ;
+	
+    #--Only clear (for replacement) prior tasks that haven't yet been started
+	START TRANSACTION;
+		DELETE FROM `n_util_i`.`async_task`
+        WHERE `crawler_job_id` = v_job_id
+			AND ( #--Not reportedly running now
+				`started_ts` IS NULL OR 
+                `ended_ts` IS NOT NULL
+			)
+		;
+		INSERT INTO `n_util_i`.`async_task` SET
+			`created_ts` = NOW(6),
+			`wait_until_ts` = NOW(6),
+			`deadline_ts` = p_deadline,
+			`crawler_job_id` = v_job_id
+		;
+	COMMIT;
+    
+END$$
+DELIMITER ;
+
+DELIMITER $$
+DROP PROCEDURE IF EXISTS `n_util`.`async_run_multithreaded_crawler_job`$$
+CREATE DEFINER=`n_util_build` PROCEDURE `n_util`.`async_run_multithreaded_crawler_job`(
+	IN p_job_name VARCHAR(48),
+    IN p_deadline TIMESTAMP(6)
+)
+    MODIFIES SQL DATA
+    SQL SECURITY DEFINER
+    COMMENT 'Schedules the execution of a job with the MySQL event scheduler.'
+BEGIN
+	DECLARE v_job_id INT UNSIGNED;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+        BEGIN
+			#--TODO: Add a specific error message for duplicate entry (a task for this job is already running)
+			ROLLBACK;
             RESIGNAL;
         END;
 	
-    SET @n_util__crawler_DSQL = CONCAT("
-		CREATE DEFINER = `n_util` EVENT `n_util`.`",`n_util_i`.`check_alias`(REPLACE(REPLACE(CONCAT('N_Util Crawler Job: ',p_job_name),' ','_'),'`','')),"`
-			ON SCHEDULE AT CURRENT_TIMESTAMP
-			ON COMPLETION NOT PRESERVE
-			ENABLE
-			COMMENT 'Created by N_Util to asynchronously execute the job in the name'
-			DO
-				CALL `n_util`.`run_crawler_job`(
-					'",p_job_name,"', #--Job name
-					NULL, #--Status Frequency
-					'",p_deadline,"' #--Deadline
-				)
-			;
-	");
-	PREPARE n_util__create_async_crawler_event FROM @n_util__crawler_DSQL;
-	EXECUTE n_util__create_async_crawler_event;
-	DEALLOCATE PREPARE n_util__create_async_crawler_event;
+    DROP TEMPORARY TABLE IF EXISTS `n_util_i`.`MTCJ_threads`;
+    CREATE TEMPORARY TABLE `n_util_i`.`MTCJ_threads`(
+		`crawler_job_id` INT UNSIGNED NOT NULL,
+        PRIMARY KEY (`crawler_job_id`)
+	) ENGINE = MEMORY;
     
+    INSERT INTO `n_util_i`.`MTCJ_threads`
+	SELECT `job_id`
+    FROM `n_util_i`.`crawler_job`
+    WHERE `job_name` LIKE CONCAT(p_job_name, ' --- thread #%')
+    ;
+    	
+    #--Only clear (for replacement) prior tasks that haven't yet been started
+	START TRANSACTION;
+		DELETE T 
+        FROM `n_util_i`.`async_task` AS T
+        JOIN `n_util_i`.`MTCJ_threads` AS J
+			USING (`crawler_job_id`)
+        WHERE TRUE
+			AND ( #--Not reportedly running now
+				T.`started_ts` IS NULL OR 
+                T.`ended_ts` IS NOT NULL
+			)
+		;
+		INSERT INTO `n_util_i`.`async_task` (`created_ts`, `wait_until_ts`, `deadline_ts`, `crawler_job_id`)
+        SELECT 
+			NOW(6) AS `created_ts`,
+			NOW(6) AS `wait_until_ts`,
+			p_deadline AS `deadline_ts`,
+			J.crawler_job_id AS `crawler_job_id`
+		FROM `n_util_i`.`MTCJ_threads` AS J
+		;
+	COMMIT;
+    
+    DROP TEMPORARY TABLE IF EXISTS `n_util_i`.`MTCJ_threads`;
 END$$
 DELIMITER ;
 
@@ -51,7 +115,7 @@ BEGIN
 	SET FOREIGN_KEY_CHECKS = 0; #--They reference each other including a self-reference, and the chain is too long by normal means
 	DELETE I
 	FROM `n_util`.`crawler_job_iteration` AS I
-	JOIN `n_util_s`.`crawler_job` AS J
+	JOIN `n_util_i`.`crawler_job` AS J
 		USING (job_id)
 	WHERE `job_name` = p_job_name;
 	SET FOREIGN_KEY_CHECKS = 1;
@@ -75,7 +139,7 @@ BEGIN
 	SET FOREIGN_KEY_CHECKS = 0; #--They reference each other including a self-reference, and the chain is too long by normal means
 	DELETE I
 	FROM `n_util`.`crawler_job_iteration` AS I
-	JOIN `n_util_s`.`crawler_job` AS J
+	JOIN `n_util_i`.`crawler_job` AS J
 		USING (job_id)
 	WHERE `job_name` LIKE CONCAT(p_job_name, ' --- thread #%');
 	SET FOREIGN_KEY_CHECKS = 1;
@@ -93,12 +157,13 @@ CREATE DEFINER=`n_util_build` PROCEDURE `n_util`.`delete_crawler_thread_jobs`(
 BEGIN
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
         BEGIN
+			ROLLBACK;
             RESIGNAL;
         END;
 	START TRANSACTION;
 		CALL `n_util`.`reset_crawler_threads`(p_job_name);
 		DELETE J
-		FROM `n_util_s`.`crawler_job` AS J
+		FROM `n_util_i`.`crawler_job` AS J
 		WHERE `job_name` LIKE CONCAT(p_job_name, ' --- thread #%');
 	COMMIT;
 END$$
@@ -134,7 +199,7 @@ BEGIN
         
 	SET v_range_size = CEIL((p_first_col_boundary_high - p_first_col_boundary_low) / p_thread_count);
     
-    INSERT INTO `n_util_s`.`crawler_job` (
+    INSERT INTO `n_util_i`.`crawler_job` (
 		`job_name`,
 		`workset_schema`,
 		`workset_table`,
@@ -180,6 +245,15 @@ DELIMITER ;
 
 #--Test (run 09_test_work.sql first)
 /*
+use `n_util_s`;
+TRUNCATE TABLE `n_test_app`.`crawler_target`;
+SET FOREIGN_KEY_CHECKS = 0;
+DELETE I, J
+FROM `n_util_s`.`crawler_job` AS J
+LEFT JOIN `n_util`.`crawler_job_iteration` AS I
+	USING (job_id)
+WHERE `job_name` LIKE 'multithreaded test --- thread #%';
+SET FOREIGN_KEY_CHECKS = 1;
 CALL `n_util`.`register_multithreaded_crawler`(
 	'multithreaded test',
     80,
@@ -193,14 +267,19 @@ CALL `n_util`.`register_multithreaded_crawler`(
 	JSON_ARRAY('ordinal1', 'ordinal2'),
     JSON_ARRAY(0, 0),
     10000,
-    11600
+    16000
 );
 SELECT * FROM `n_util_s`.`crawler_job` WHERE job_name LIKE 'multithreaded test --- thread #%';
-CALL `n_util`.`async_run_crawler_job`('multithreaded test --- thread #0',NOW(6) + INTERVAL 5 SECOND);
-SELECT @n_util__crawler_DSQL;
-SHOW EVENTS IN `n_util`;
+SELECT T.* FROM `n_util_i`.`async_task` AS T JOIN `n_util_s`.`crawler_job` AS J ON J.job_id = T.crawler_job_id WHERE job_name LIKE 'multithreaded test --- thread #%';
+CALL `n_util`.`async_run_multithreaded_crawler_job`('multithreaded test',NOW(6) + INTERVAL 5 DAY);
+SELECT T.* FROM `n_util_i`.`async_task` AS T JOIN `n_util_s`.`crawler_job` AS J ON J.job_id = T.crawler_job_id WHERE job_name LIKE 'multithreaded test --- thread #%';
+SHOW EVENTS IN `n_util_i`;
 SHOW PROCESSLIST;
 DO SLEEP(6);
 CALL `n_util`.`delete_crawler_thread_jobs`('multithreaded test');
 SELECT * FROM `n_util_s`.`crawler_job` WHERE job_name LIKE 'multithreaded test --- thread #%';
+SELECT T.* FROM `n_util_i`.`async_task` AS T JOIN `n_util_s`.`crawler_job` AS J ON J.job_id = T.crawler_job_id WHERE job_name LIKE 'multithreaded test --- thread #%';
+
+		SELECT 'Check side-effect on target table' AS `significance`;
+		SELECT * FROM `n_test_app`.`crawler_target`;
 */
