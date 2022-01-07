@@ -76,7 +76,7 @@ CREATE TABLE `n_util`.`crawler_job_iteration` (
   #--INDEX `work_first` (`job_id` ASC, `chunk_first_tuple` ASC) VISIBLE, #--TODO: Index JSON values
   #--INDEX `work_last` (`job_id` ASC, `chunk_last_tuple` ASC) VISIBLE, #--TODO: Index JSON values
   INDEX created_ts (logged_ts ASC),
-  INDEX process_id (process_id ASC),
+  INDEX `process_id` (`process_id` ASC, `job_id` ASC, `iteration_num` ASC),
   INDEX resume_iteration_num (job_id ASC, resume_iteration_num ASC),
   CONSTRAINT `c_job_i2c_job`
     FOREIGN KEY (`job_id`)
