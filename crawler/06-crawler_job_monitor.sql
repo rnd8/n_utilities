@@ -70,4 +70,4 @@ VIEW `n_util`.`crawler_job_monitor` AS
 ;
 
 #--Test:
-#--SELECT * FROM `n_util`.`crawler_job_monitor` LIMIT 8;
+#--SELECT * FROM `n_util`.`crawler_job_monitor` WHERE job_name LIKE 'multithreaded test%';
