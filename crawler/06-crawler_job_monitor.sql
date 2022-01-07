@@ -16,7 +16,63 @@
     You should have received a copy of the GNU General Public License
     along with N_utilities.  If not, see <https://www.gnu.org/licenses/>.
 */
+DELIMITER $$
+DROP FUNCTION IF EXISTS `n_util_i`.`crawler_job_latest_iteration`$$
+CREATE DEFINER=`n_util_build`@`%` FUNCTION `n_util_i`.`crawler_job_latest_iteration`(
+    `p_job_id` INT UNSIGNED
+) RETURNS INT UNSIGNED
+    READS SQL DATA
+    DETERMINISTIC
+    SQL SECURITY INVOKER
+    COMMENT 'Errors early when a string would cause a later error or unexpected behavior when used in dynamic SQL as an alias'
+BEGIN 
+	RETURN (
+		SELECT iteration_num
+		FROM n_util.crawler_job_iteration FORCE INDEX (PRIMARY)
+		WHERE job_id = p_job_id
+		ORDER BY job_id DESC, iteration_num DESC
+		LIMIT 1
+    );
+END$$
+DELIMITER ;
 
+DELIMITER $$
+DROP FUNCTION IF EXISTS `n_util_i`.`crawler_job_estimation_iteration`$$
+CREATE DEFINER=`n_util_build`@`%` FUNCTION `n_util_i`.`crawler_job_estimation_iteration`(
+    `p_job_id` INT UNSIGNED,
+    `p_process_id` BIGINT UNSIGNED
+) RETURNS INT UNSIGNED
+    READS SQL DATA
+    DETERMINISTIC
+    SQL SECURITY INVOKER
+    COMMENT 'Errors early when a string would cause a later error or unexpected behavior when used in dynamic SQL as an alias'
+BEGIN 
+	RETURN (
+		SELECT iteration_num
+		FROM n_util.crawler_job_iteration
+		WHERE TRUE
+			AND process_id = p_process_id
+            AND job_id = p_job_id
+		ORDER BY process_id ASC, job_id ASC, iteration_num ASC
+		LIMIT 1
+    );
+END$$
+DELIMITER ;
+
+CREATE OR REPLACE
+	ALGORITHM=MERGE 
+    DEFINER=`n_util_build` 
+    SQL SECURITY DEFINER 
+VIEW `n_util_i`.`crawler_job_and_resume` AS 
+SELECT
+	J.*,
+    `n_util_i`.`crawler_job_latest_iteration`(J.job_id) AS iteration_num
+FROM n_util_i.crawler_job AS J
+;
+#--TEST:
+#--EXPLAIN SELECT * FROM `n_util_i`.`crawler_job_and_resume`;
+
+    
 CREATE OR REPLACE
 	ALGORITHM=MERGE 
     DEFINER=`n_util_build` 
@@ -55,28 +111,13 @@ FROM (
         UNIX_TIMESTAMP(I.logged_ts) - UNIX_TIMESTAMP(E.logged_ts) AS est_sample_secs,
         JSON_EXTRACT(I.chunk_last_tuple, '$[0]') - JSON_EXTRACT(E.chunk_last_tuple, '$[0]') AS est_sample_size,
 		(JSON_EXTRACT(J.boundary_end_tuple, '$[0]') - JSON_EXTRACT(I.chunk_last_tuple, '$[0]')) AS prefix_remaining_size
-	FROM n_util_s.crawler_job AS J
+	FROM `n_util_i`.`crawler_job_and_resume` AS J
 	JOIN n_util.crawler_job_iteration AS I
 		ON I.job_id = J.job_id
-		AND I.iteration_num = (
-			SELECT top.iteration_num
-			FROM n_util.crawler_job_iteration AS top
-			WHERE top.job_id = I.job_id
-			ORDER BY top.job_id DESC, top.iteration_num DESC
-			LIMIT 1
-		)
+		AND I.iteration_num = J.iteration_num
 	LEFT JOIN n_util.crawler_job_iteration AS E #--Estimator tuple
-		ON E.job_id = J.job_id
-        AND E.iteration_num = (
-			SELECT P.iteration_num
-            FROM n_util.crawler_job_iteration AS P
-            WHERE TRUE
-				AND P.job_id = I.job_id
-                AND P.iteration_num < I.iteration_num
-				AND P.process_id = I.process_id
-			ORDER BY P.job_id ASC, P.iteration_num ASC
-            LIMIT 1
-		)
+		ON E.job_id = I.job_id
+        AND E.iteration_num = `n_util_i`.`crawler_job_estimation_iteration`(I.job_id, I.process_id)
 ) AS stats
 ;
 
@@ -89,4 +130,4 @@ VIEW `n_util`.`crawler_job_monitor` AS
 ;
 
 #--Test:
-#--SELECT * FROM `n_util`.`crawler_job_monitor` WHERE job_name LIKE 'multithreaded test%';
+#--EXPLAIN SELECT * FROM `n_util`.`crawler_job_monitor` WHERE job_name LIKE 'multithreaded test%';
