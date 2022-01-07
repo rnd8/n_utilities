@@ -18,6 +18,7 @@
 */
 
 DROP TABLE IF EXISTS `n_util_i`.`async_task`;
+SET @b4__explicit_defaults_for_timestamp = @@explicit_defaults_for_timestamp, @@explicit_defaults_for_timestamp = 1; #--Disable MySQL's non-standard timestamp handling for older versions
 CREATE TABLE `n_util_i`.`async_task` (
   `task_id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `process_id` BIGINT UNSIGNED NULL,
@@ -40,6 +41,7 @@ CREATE TABLE `n_util_i`.`async_task` (
 )
 COMMENT = 'A crawling job and the associated options'
 ;
+SET @@explicit_defaults_for_timestamp = @b4__explicit_defaults_for_timestamp; #--Reenable original mode
 
 CREATE OR REPLACE
 	ALGORITHM=MERGE 

@@ -22,7 +22,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_watchdog`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	ENABLE
-	COMMENT 'Ensures that the thread launchers are enabled when there are any active tasks.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_watchdog`
 	;
@@ -32,7 +32,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher0`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_thread_launcher`
 	;
@@ -41,7 +41,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher1`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_thread_launcher`
 	;
@@ -50,7 +50,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher2`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_thread_launcher`
 	;
@@ -59,7 +59,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher3`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_thread_launcher`
 	;
@@ -68,7 +68,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher4`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_thread_launcher`
 	;
@@ -77,7 +77,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher5`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_thread_launcher`
 	;
@@ -86,7 +86,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher6`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_thread_launcher`
 	;
@@ -95,7 +95,7 @@ CREATE DEFINER = `n_util_build` EVENT `n_util_i`.`async_task_thread_launcher7`
 	ON SCHEDULE EVERY 1 SECOND
 	ON COMPLETION PRESERVE
 	DISABLE
-	COMMENT 'There are multiple launcher events because MySQL does not yet support fractional second scheduling.'
+	COMMENT 'Multiple launcher events work around MySQL low-res scheduling.'
 	DO
 		CALL `n_util_i`.`async_task_thread_launcher`
 	;
