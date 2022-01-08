@@ -16,6 +16,8 @@
     You should have received a copy of the GNU General Public License
     along with N_utilities.  If not, see <https://www.gnu.org/licenses/>.
 */
+use `n_util_i`;
+
 DELIMITER $$
 DROP FUNCTION IF EXISTS `n_util_i`.`crawler_job_latest_iteration`$$
 CREATE DEFINER=`n_util_build`@`%` FUNCTION `n_util_i`.`crawler_job_latest_iteration`(
