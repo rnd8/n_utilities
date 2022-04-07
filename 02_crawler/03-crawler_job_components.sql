@@ -62,10 +62,17 @@ BEGIN
 	FROM (
 		SELECT 
 			J.ordinal_columns,
+            /* #--MySQL doesn't handle JSON arrays correctly with GREATEST, so we must use IF and the > comparison instead
 			GREATEST( #--If one is null, substitute the other, if both are not null, use the furthest ahead
 				COALESCE(J.`boundary_start_tuple`, I.`chunk_last_tuple`),
 				COALESCE(I.`chunk_last_tuple`, J.`boundary_start_tuple`)
 			) AS `resume_tuple`,
+            */
+            IF(
+				COALESCE(J.`boundary_start_tuple`, I.`chunk_last_tuple`) > COALESCE(I.`chunk_last_tuple`, J.`boundary_start_tuple`),
+                COALESCE(J.`boundary_start_tuple`, I.`chunk_last_tuple`),
+                COALESCE(I.`chunk_last_tuple`, J.`boundary_start_tuple`)
+            ) AS `resume_tuple`,
             J.`boundary_end_tuple`,
             #--I.`chunk_last_tuple`,
 			I.`iteration_num`
